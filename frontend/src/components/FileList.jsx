@@ -118,8 +118,8 @@ export default function FileList({
           />
         </div>
         <div>Name</div>
-        <div>Size</div>
-        <div>Modified</div>
+        <div className="file-size-header">Size</div>
+        <div className="file-date-header">Modified</div>
         <div style={{ textAlign: 'right' }}>Actions</div>
       </div>
       <div className="file-list">
@@ -136,26 +136,28 @@ export default function FileList({
                 onChange={() => onToggleSelect(item.key)}
               />
             </div>
-            <div className="file-item-name" onClick={() => item.isFolder && onNavigateFolder(item.key)}>
-              {getFileIcon(item)}
-              {renamingKey === item.key ? (
-                <input
-                  className="rename-input"
-                  value={renameValue}
-                  onChange={(e) => setRenameValue(e.target.value)}
-                  onBlur={() => handleFinishRename(item)}
-                  onKeyDown={(e) => handleRenameKeyDown(e, item)}
-                  autoFocus
-                  onClick={(e) => e.stopPropagation()}
-                />
-              ) : (
-                <span className={`file-name-text ${item.isFolder ? 'folder-name' : ''}`}>
-                  {item.name}
-                </span>
-              )}
+            <div className="file-item-info" onClick={() => item.isFolder && onNavigateFolder(item.key)}>
+              <div className="file-item-name">
+                {getFileIcon(item)}
+                {renamingKey === item.key ? (
+                  <input
+                    className="rename-input"
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onBlur={() => handleFinishRename(item)}
+                    onKeyDown={(e) => handleRenameKeyDown(e, item)}
+                    autoFocus
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  <span className={`file-name-text ${item.isFolder ? 'folder-name' : ''}`}>
+                    {item.name}
+                  </span>
+                )}
+              </div>
+              <div className="file-size">{item.isFolder ? '—' : formatSize(item.size)}</div>
+              <div className="file-date">{item.lastModified || '—'}</div>
             </div>
-            <div className="file-size">{item.isFolder ? '—' : formatSize(item.size)}</div>
-            <div className="file-date">{item.lastModified || '—'}</div>
             <div className="file-actions">
               {!item.isFolder && (
                 <button
