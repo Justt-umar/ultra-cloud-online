@@ -1381,7 +1381,9 @@ body {
   }
 
   .file-size {
-    display: none;
+    display: block;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
   }
 
   .file-date {
@@ -1391,6 +1393,17 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  /* Show size and date on the same line: "180.6 KB  •  2026-04-23 16:59" */
+  .file-item-info .file-size,
+  .file-item-info .file-date {
+    display: inline;
+  }
+
+  .file-item-info .file-size::after {
+    content: '  •  ';
+    color: var(--text-tertiary);
   }
 
   .file-actions {
