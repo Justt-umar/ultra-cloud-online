@@ -756,12 +756,13 @@ body {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .file-list-header {
   display: grid;
-  grid-template-columns: 40px 1fr 100px 160px 120px;
+  grid-template-columns: 40px minmax(150px, 1fr) 100px 160px 140px;
   padding: 10px 16px;
   background: var(--bg-tertiary);
   border-bottom: 1px solid var(--border-color);
@@ -779,7 +780,7 @@ body {
 
 .file-item {
   display: grid;
-  grid-template-columns: 40px 1fr 100px 160px 120px;
+  grid-template-columns: 40px minmax(150px, 1fr) 100px 160px 140px;
   align-items: center;
   padding: 10px 16px;
   border-bottom: 1px solid var(--border-color);
@@ -1338,17 +1339,63 @@ body {
   }
 
   .file-explorer {
-    padding: 16px;
+    padding: 12px;
   }
 
-  .file-list-header,
-  .file-item {
-    grid-template-columns: 36px 1fr 80px;
-  }
-
-  .file-date,
-  .file-actions {
+  .file-list-header {
     display: none;
+  }
+
+  .file-item {
+    display: grid;
+    grid-template-columns: 32px 1fr auto;
+    grid-template-rows: auto auto;
+    padding: 12px;
+    gap: 2px 8px;
+    align-items: center;
+  }
+
+  .file-item-checkbox {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    display: flex;
+    justify-content: flex-start;
+  }
+
+  .file-item-name {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  .file-size {
+    grid-column: 2;
+    grid-row: 2;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+
+  .file-date {
+    display: block;
+    grid-column: 2;
+    grid-row: 2;
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    margin-top: 2px;
+  }
+
+  .file-size {
+    display: none;
+  }
+
+  .file-actions {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 4px;
   }
 
   .breadcrumb-bar {
@@ -1398,6 +1445,13 @@ body {
 
   .connection-status span:not(.status-dot) {
     display: none;
+  }
+
+  /* Larger tap targets for action buttons on mobile */
+  .file-action-btn {
+    width: 28px;
+    height: 28px;
+    padding: 6px;
   }
 }
 
