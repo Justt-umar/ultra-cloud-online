@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Loader2, ArrowRight, Save, Trash2, ChevronDown } from 'lucide-react';
+import { Loader2, ArrowRight, Save, Trash2, ChevronDown, Lock } from 'lucide-react';
 import CorsInstructions from './CorsInstructions';
 
 const STORAGE_KEY = 'ultracloud_saved_credentials';
@@ -15,7 +15,6 @@ function getSavedCredentials() {
 
 function saveCredential(cred) {
   const existing = getSavedCredentials();
-  // Avoid duplicates by bucket + accessKeyId
   const filtered = existing.filter(
     (c) => !(c.bucket === cred.bucket && c.accessKeyId === cred.accessKeyId)
   );
@@ -28,6 +27,12 @@ function deleteSavedCredential(index) {
   const existing = getSavedCredentials();
   existing.splice(index, 1);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+}
+
+// Blocks any attempt to copy/cut/drag text out of a protected field
+function blockCopy(e) {
+  e.preventDefault();
+  return false;
 }
 
 export default function CredentialsForm({ onConnect }) {
@@ -43,11 +48,16 @@ export default function CredentialsForm({ onConnect }) {
   const [savedList, setSavedList] = useState([]);
   const [showSaved, setShowSaved] = useState(false);
 
+  // When true: credentials are locked — shown as masked, non-selectable, non-copyable
+  const [testMode, setTestMode] = useState(false);
+
   useEffect(() => {
     setSavedList(getSavedCredentials());
   }, []);
 
   const handleChange = (e) => {
+    // If in test mode, block all manual edits to protected fields
+    if (testMode && ['accessKeyId', 'secretAccessKey'].includes(e.target.name)) return;
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
@@ -56,7 +66,7 @@ export default function CredentialsForm({ onConnect }) {
     setLoading(true);
     try {
       await onConnect(form);
-      if (rememberMe) {
+      if (rememberMe && !testMode) {
         saveCredential(form);
         setSavedList(getSavedCredentials());
       }
@@ -66,6 +76,7 @@ export default function CredentialsForm({ onConnect }) {
   };
 
   const handleLoadSaved = (cred) => {
+    setTestMode(false);
     setForm({
       accessKeyId: cred.accessKeyId,
       secretAccessKey: cred.secretAccessKey,
@@ -88,6 +99,8 @@ export default function CredentialsForm({ onConnect }) {
       region: 'us-east-1',
       bucket: 'my-s3-bucket428792470233',
     });
+    // Lock the fields so credentials cannot be seen or copied
+    setTestMode(true);
   };
 
   const regions = [
@@ -97,6 +110,26 @@ export default function CredentialsForm({ onConnect }) {
     'ap-northeast-2', 'ap-northeast-3', 'sa-east-1', 'ca-central-1',
     'me-south-1', 'af-south-1',
   ];
+
+  // Shared props applied to protected fields in test mode
+  const lockedFieldProps = {
+    readOnly: true,
+    onCopy: blockCopy,
+    onCut: blockCopy,
+    onDragStart: blockCopy,
+    onContextMenu: blockCopy,   // disables right-click → Copy
+    onMouseDown: (e) => e.preventDefault(), // prevents text selection via mouse
+    onKeyDown: (e) => {
+      // Block Ctrl+A, Ctrl+C, Ctrl+X
+      if (e.ctrlKey || e.metaKey) e.preventDefault();
+    },
+    style: {
+      userSelect: 'none',
+      WebkitUserSelect: 'none',
+      cursor: 'default',
+      letterSpacing: '0.15em',   // makes the masked dots look intentional
+    },
+  };
 
   return (
     <div className="credentials-container">
@@ -150,34 +183,54 @@ export default function CredentialsForm({ onConnect }) {
           </div>
         )}
 
+        {/* ── Access Key ID ── */}
         <div className="form-group">
-          <label htmlFor="accessKeyId">Access Key ID</label>
+          <label htmlFor="accessKeyId">
+            Access Key ID
+            {testMode && (
+              <span className="locked-badge">
+                <Lock size={11} /> Protected
+              </span>
+            )}
+          </label>
           <input
             id="accessKeyId"
             name="accessKeyId"
-            type="text"
+            // In test mode show as password so the value is fully masked (dots)
+            type={testMode ? 'password' : 'text'}
             placeholder="AKIAIOSFODNN7EXAMPLE"
-            value={form.accessKeyId}
+            value={testMode ? '••••••••••••••••••••' : form.accessKeyId}
             onChange={handleChange}
             required
             autoComplete="off"
+            {...(testMode ? lockedFieldProps : {})}
           />
         </div>
 
+        {/* ── Secret Access Key ── */}
         <div className="form-group">
-          <label htmlFor="secretAccessKey">Secret Access Key</label>
+          <label htmlFor="secretAccessKey">
+            Secret Access Key
+            {testMode && (
+              <span className="locked-badge">
+                <Lock size={11} /> Protected
+              </span>
+            )}
+          </label>
           <input
             id="secretAccessKey"
             name="secretAccessKey"
             type="password"
             placeholder="••••••••••••••••••••"
-            value={form.secretAccessKey}
+            value={testMode ? '••••••••••••••••••••••••••••••••••••••••' : form.secretAccessKey}
             onChange={handleChange}
             required
             autoComplete="off"
+            {...(testMode ? lockedFieldProps : {})}
           />
         </div>
 
+        {/* ── Region ── */}
         <div className="form-group">
           <label htmlFor="region">Region</label>
           <select
@@ -185,6 +238,7 @@ export default function CredentialsForm({ onConnect }) {
             name="region"
             value={form.region}
             onChange={handleChange}
+            disabled={testMode}
           >
             {regions.map((r) => (
               <option key={r} value={r}>{r}</option>
@@ -192,6 +246,7 @@ export default function CredentialsForm({ onConnect }) {
           </select>
         </div>
 
+        {/* ── Bucket Name ── */}
         <div className="form-group">
           <label htmlFor="bucket">Bucket Name</label>
           <input
@@ -203,20 +258,42 @@ export default function CredentialsForm({ onConnect }) {
             onChange={handleChange}
             required
             autoComplete="off"
+            // Bucket name is visible (not sensitive) but still read-only in test mode
+            readOnly={testMode}
+            style={testMode ? { cursor: 'default', opacity: 0.75 } : {}}
           />
         </div>
 
-        <div className="remember-me">
-          <label className="remember-me-label">
-            <input
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-            />
-            <Save size={14} />
-            Save credentials for next visit
-          </label>
-        </div>
+        {/* ── Test mode info banner ── */}
+        {testMode && (
+          <div className="test-mode-banner">
+            <Lock size={14} />
+            <span>
+              Test credentials are active and <strong>protected</strong> — they cannot be viewed or copied.{' '}
+              <button
+                type="button"
+                className="test-mode-clear-btn"
+                onClick={() => { setTestMode(false); setForm({ accessKeyId: '', secretAccessKey: '', region: 'us-east-1', bucket: '' }); }}
+              >
+                Clear & use your own
+              </button>
+            </span>
+          </div>
+        )}
+
+        {!testMode && (
+          <div className="remember-me">
+            <label className="remember-me-label">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+              />
+              <Save size={14} />
+              Save credentials for next visit
+            </label>
+          </div>
+        )}
 
         <button className="btn btn-primary" type="submit" disabled={loading}>
           {loading ? (
@@ -241,8 +318,8 @@ export default function CredentialsForm({ onConnect }) {
         {showCors && <CorsInstructions />}
       </form>
 
-      <button 
-        type="button" 
+      <button
+        type="button"
         onClick={handleTestCredentials}
         style={{
           position: 'fixed',
@@ -261,15 +338,15 @@ export default function CredentialsForm({ onConnect }) {
           transition: 'all 0.2s ease',
           display: 'flex',
           alignItems: 'center',
-          gap: '8px'
+          gap: '8px',
         }}
         onMouseEnter={(e) => {
-          e.target.style.transform = 'translateY(-2px)';
-          e.target.style.boxShadow = 'var(--shadow-glow)';
+          e.currentTarget.style.transform = 'translateY(-2px)';
+          e.currentTarget.style.boxShadow = 'var(--shadow-glow)';
         }}
         onMouseLeave={(e) => {
-          e.target.style.transform = 'translateY(0)';
-          e.target.style.boxShadow = 'var(--shadow-lg)';
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
         }}
       >
         ✨ Use Test Credentials
