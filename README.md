@@ -1,16 +1,19 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/Ultra%20Cloud-Online-ff6b00?style=for-the-badge&logo=amazonwebservices&logoColor=white" alt="Ultra Cloud Online" />
+<img src="https://img.shields.io/badge/Ultra%20Cloud-Online-ff6b00?style=for-the-badge&logo=icloud&logoColor=white" alt="Ultra Cloud Online" />
 
 # ☁️ Ultra Cloud Online
 
-**A full-stack, self-hosted cloud storage manager — bring your own AWS S3 bucket and manage your files from a beautiful, modern web interface.**
+**A full-stack, multi-cloud storage manager — bring your own bucket from AWS S3, Azure Blob, GCP Cloud Storage, or Backblaze B2 and manage your files from a beautiful, modern web interface.**
 
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react)](https://reactjs.org/)
 [![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=flat-square&logo=vite)](https://vitejs.dev/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4-6DB33F?style=flat-square&logo=springboot)](https://spring.io/projects/spring-boot)
 [![Java](https://img.shields.io/badge/Java-23-ED8B00?style=flat-square&logo=openjdk)](https://openjdk.org/)
-[![AWS SDK](https://img.shields.io/badge/AWS%20SDK-v2-FF9900?style=flat-square&logo=amazonaws)](https://aws.amazon.com/sdk-for-java/)
+[![AWS S3](https://img.shields.io/badge/AWS%20S3-Supported-FF9900?style=flat-square&logo=amazonaws)](https://aws.amazon.com/s3/)
+[![Azure Blob](https://img.shields.io/badge/Azure%20Blob-Supported-0078D4?style=flat-square&logo=microsoftazure)](https://azure.microsoft.com/en-us/products/storage/blobs)
+[![GCP Storage](https://img.shields.io/badge/GCP%20Storage-Supported-4285F4?style=flat-square&logo=googlecloud)](https://cloud.google.com/storage)
+[![Backblaze B2](https://img.shields.io/badge/Backblaze%20B2-Supported-E21E29?style=flat-square&logo=backblaze)](https://www.backblaze.com/b2/cloud-storage.html)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
@@ -31,7 +34,11 @@
   - [Prerequisites](#prerequisites)
   - [Local Development](#local-development)
   - [Environment Variables](#environment-variables)
+- [Supported Cloud Providers](#-supported-cloud-providers)
 - [AWS S3 Setup](#-aws-s3-setup)
+- [Azure Blob Setup](#-azure-blob-storage-setup)
+- [GCP Cloud Storage Setup](#-gcp-cloud-storage-setup)
+- [Backblaze B2 Setup](#-backblaze-b2-setup)
 - [API Reference](#-api-reference)
 - [Docker Deployment](#-docker-deployment)
 - [Cloud Deployment](#-cloud-deployment)
@@ -45,18 +52,28 @@
 
 ## 🌟 Overview
 
-**Ultra Cloud Online** is a production-ready, full-stack web application that lets you manage files in any AWS S3 bucket through a polished, browser-based interface. There is no database, no user accounts, and no vendor lock-in — simply provide your AWS credentials at runtime, and you get a full-featured file manager directly connected to your bucket.
+**Ultra Cloud Online** is a production-ready, full-stack web application that lets you manage files in **any major cloud storage provider** through a polished, browser-based interface. There is no database, no user accounts, and no vendor lock-in — simply select your cloud provider, enter your credentials at runtime, and you get a full-featured file manager directly connected to your bucket.
 
-The application is architected as a **secure server-side proxy**: your AWS credentials are never exposed to the browser. All S3 operations flow through the Spring Boot backend, which holds the authenticated session in memory for the lifetime of the connection.
+The application is architected as a **secure server-side proxy**: your cloud credentials are never exposed to the browser. All storage operations flow through the Spring Boot backend, which holds the authenticated session in memory for the lifetime of the connection.
+
+### Supported Providers
+
+| Provider | Free Tier | Storage |
+|---|---|---|
+| ☁️ **AWS S3** | 5 GB, 12 months | Standard S3 buckets |
+| 🔷 **Azure Blob Storage** | 5 GB LRS, 12 months | Blob containers |
+| 🔵 **Google Cloud Storage** | 5 GB in US regions, always free | GCS buckets |
+| 🔴 **Backblaze B2** | **10 GB + 1 GB/day downloads, always free** | B2 buckets |
 
 ### Why Ultra Cloud Online?
 
 | Problem | Solution |
 |---|---|
-| AWS Console is complex and overwhelming | Clean, minimal UI focused purely on file management |
-| Credentials exposed if talking to S3 directly from the browser | Backend proxy keeps credentials server-side only |
-| No good mobile-friendly S3 managers | Fully responsive design for desktop, tablet, and mobile |
-| Third-party tools require account creation | Zero accounts needed — just your own AWS credentials |
+| Cloud consoles are complex and overwhelming | Clean, minimal UI focused purely on file management |
+| Locked into one cloud provider | Switch between AWS, Azure, GCP, and Backblaze freely |
+| Credentials exposed if talking directly from the browser | Backend proxy keeps credentials server-side only |
+| No good mobile-friendly cloud storage managers | Fully responsive design for desktop, tablet, and mobile |
+| Third-party tools require account creation | Zero accounts needed — just your own cloud credentials |
 
 ---
 
@@ -138,6 +155,13 @@ The application is architected as a **secure server-side proxy**: your AWS crede
 | **Render / Railway** | Backend hosting (PaaS) |
 | **Vercel / Netlify** | Frontend static hosting |
 
+### Cloud Storage SDKs
+| SDK | Provider | Version |
+|---|---|---|
+| **AWS SDK for Java v2** | AWS S3 + Backblaze B2 | 2.31.9 |
+| **Azure Storage Blob** | Azure Blob Storage | 12.29.1 |
+| **Google Cloud Storage** | GCP Cloud Storage | 2.45.0 |
+
 ---
 
 ## 🏗 Architecture
@@ -148,39 +172,48 @@ The application is architected as a **secure server-side proxy**: your AWS crede
 │  ┌─────────────────────────────────────────────────────┐    │
 │  │              React + Vite Frontend                  │    │
 │  │                                                     │    │
-│  │   CredentialsForm ──┐                               │    │
-│  │   FileExplorer ─────┤── axios ──► REST API calls    │    │
-│  │   FileList ─────────┤                               │    │
-│  │   Modals ───────────┘                               │    │
+│  │   Provider Selector ──┐                             │    │
+│  │   CredentialsForm ────┤── axios ──► REST API calls  │    │
+│  │   FileExplorer ───────┤                             │    │
+│  │   FileList ───────────┤                             │    │
+│  │   Modals ─────────────┘                             │    │
 │  └─────────────────────────┬───────────────────────────┘    │
 └────────────────────────────│────────────────────────────────┘
                              │ HTTPS
                              ▼
 ┌─────────────────────────────────────────────────────────────┐
-│               Spring Boot Backend (Java 23)                  │
+│            Spring Boot Backend (Java 23)                      │
 │                                                              │
-│  S3Controller (/api/**)                                      │
+│  StorageController (/api/**)                                 │
 │       │                                                      │
-│       ├── S3SessionManager  (holds S3Client + S3Presigner)   │
-│       │        └── validates connection, manages lifecycle   │
+│       ├── StorageSessionManager  (active provider)           │
+│       │        └── StorageProviderFactory                    │
+│       │              ├── AwsStorageProvider                  │
+│       │              ├── AzureStorageProvider                │
+│       │              ├── GcpStorageProvider                  │
+│       │              └── BackblazeStorageProvider            │
 │       │                                                      │
-│       └── S3Service  (all S3 operations)                    │
+│       └── StorageService  (all operations)                  │
 │                └── listObjects, upload, download, delete,    │
 │                    rename, createFolder, presignUrl, search  │
-└─────────────────────────────┬───────────────────────────────┘
-                              │ AWS SDK v2 (HTTPS)
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      AWS S3 Bucket                           │
-│                    (user-provided)                           │
-└─────────────────────────────────────────────────────────────┘
+└──────────────┬──────────┬──────────┬──────────┬─────────────┘
+               │          │          │          │
+        AWS SDK v2    Azure SDK   GCP SDK   AWS SDK v2
+               │          │          │      (B2 endpoint)
+               ▼          ▼          ▼          ▼
+         ┌─────────┐┌──────────┐┌─────────┐┌──────────┐
+         │ AWS S3  ││  Azure   ││  GCP    ││Backblaze │
+         │ Bucket  ││  Blob    ││ Storage ││   B2     │
+         └─────────┘└──────────┘└─────────┘└──────────┘
 ```
 
 **Key design decisions:**
-- **No database** — S3 is the only data store. The backend is entirely stateless except for the in-memory session.
-- **No frontend-to-S3 direct calls** — eliminates CORS complexity and credential exposure.
-- **Session-per-server** — one active S3 session at a time (suitable for personal/team use).
-- **Pre-signed URLs** — share files without exposing your credentials; AWS signs the URL directly.
+- **Strategy Pattern** — each cloud provider implements a `StorageProvider` interface, selected at connect time.
+- **No database** — cloud storage is the only data store. The backend is entirely stateless except for the in-memory session.
+- **No frontend-to-cloud direct calls** — eliminates CORS complexity and credential exposure.
+- **Session-per-server** — one active storage session at a time (suitable for personal/team use).
+- **Pre-signed URLs / SAS tokens** — share files without exposing your credentials.
+- **Backblaze B2** reuses the AWS SDK (S3-compatible API) — zero extra code needed.
 
 ---
 

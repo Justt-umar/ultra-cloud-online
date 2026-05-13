@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useToast } from '../context/ToastContext';
 import * as api from '../services/api';
+import { encryptFile, decryptBlob, isEncryptedFile, getOriginalFilename } from '../services/crypto';
 import Breadcrumb from './Breadcrumb';
 import SearchFilterBar from './SearchFilterBar';
 import DropZone from './DropZone';
@@ -11,8 +12,49 @@ import CreateFolderModal from './CreateFolderModal';
 import PreviewModal from './PreviewModal';
 import ShareModal from './ShareModal';
 import DeleteConfirmModal from './DeleteConfirmModal';
+import VersionHistoryModal from './VersionHistoryModal';
 
-export default function FileExplorer() {
+// Upload files one-at-a-time for per-file progress and cancel support
+async function uploadFilesSequentially(files, prefix, encryption, callbacks) {
+  const { onFileStart, onFileProgress, onFileComplete, onFileError, shouldCancel, shouldPause } = callbacks;
+
+  for (let i = 0; i < files.length; i++) {
+    // Check cancellation
+    if (shouldCancel()) return false;
+
+    // Wait if paused
+    while (shouldPause()) {
+      await new Promise(r => setTimeout(r, 200));
+      if (shouldCancel()) return false;
+    }
+
+    let file = files[i];
+    onFileStart(i);
+
+    // Encrypt if enabled
+    if (encryption?.enabled && encryption?.passphrase) {
+      try {
+        file = await encryptFile(file, encryption.passphrase);
+      } catch {
+        onFileError(i, 'Encryption failed');
+        continue;
+      }
+    }
+
+    try {
+      await api.uploadFiles(prefix, [file], (progressEvent) => {
+        const pct = Math.round((progressEvent.loaded / progressEvent.total) * 100);
+        onFileProgress(i, pct);
+      });
+      onFileComplete(i);
+    } catch (err) {
+      onFileError(i, err.response?.data?.message || err.message);
+    }
+  }
+  return true;
+}
+
+export default function FileExplorer({ encryption }) {
   const { addToast } = useToast();
   const [currentPath, setCurrentPath] = useState('');
   const [files, setFiles] = useState([]);
@@ -27,6 +69,13 @@ export default function FileExplorer() {
   const [previewUrl, setPreviewUrl] = useState('');
   const [shareFile, setShareFile] = useState(null);
   const [keysToDelete, setKeysToDelete] = useState(null);
+  const [focusedIndex, setFocusedIndex] = useState(null);
+  const [versionFile, setVersionFile] = useState(null);
+
+  // Refs for upload control
+  const cancelRef = useRef(false);
+  const pauseRef = useRef(false);
+  const [isPaused, setIsPaused] = useState(false);
 
   // Fetch files
   const fetchFiles = useCallback(async () => {
@@ -50,6 +99,7 @@ export default function FileExplorer() {
     setSelectedKeys(new Set());
     setSearchQuery('');
     setTypeFilter('all');
+    setFocusedIndex(null);
   }, [currentPath]);
 
   // Filter files client-side for search
@@ -66,6 +116,97 @@ export default function FileExplorer() {
       return matchesQuery && matchesType;
     });
   }, [files, searchQuery, typeFilter]);
+
+  // ─── Keyboard Shortcuts ───────────────────
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Don't trigger when typing in inputs
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+
+      const ctrl = e.ctrlKey || e.metaKey;
+
+      // Ctrl+U → Upload
+      if (ctrl && e.key === 'u') {
+        e.preventDefault();
+        setShowDropzone(prev => !prev);
+        return;
+      }
+
+      // Ctrl+N → New folder
+      if (ctrl && e.key === 'n') {
+        e.preventDefault();
+        setShowCreateFolder(true);
+        return;
+      }
+
+      // Delete or Backspace → Delete selected
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedKeys.size > 0) {
+        e.preventDefault();
+        setKeysToDelete([...selectedKeys]);
+        return;
+      }
+
+      // Ctrl+A → Select all
+      if (ctrl && e.key === 'a') {
+        e.preventDefault();
+        setSelectedKeys(new Set(filteredFiles.map(f => f.key)));
+        return;
+      }
+
+      // Escape → Clear selection or close dropzone
+      if (e.key === 'Escape') {
+        if (showDropzone) { setShowDropzone(false); return; }
+        if (selectedKeys.size > 0) { setSelectedKeys(new Set()); setFocusedIndex(null); return; }
+      }
+
+      // Arrow keys → Navigate file list
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setFocusedIndex(prev => {
+          const next = prev == null ? 0 : Math.min(prev + 1, filteredFiles.length - 1);
+          return next;
+        });
+        return;
+      }
+
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setFocusedIndex(prev => {
+          const next = prev == null ? 0 : Math.max(prev - 1, 0);
+          return next;
+        });
+        return;
+      }
+
+      // Space → Toggle selection of focused item
+      if (e.key === ' ' && focusedIndex != null && filteredFiles[focusedIndex]) {
+        e.preventDefault();
+        const key = filteredFiles[focusedIndex].key;
+        setSelectedKeys(prev => {
+          const next = new Set(prev);
+          if (next.has(key)) next.delete(key);
+          else next.add(key);
+          return next;
+        });
+        return;
+      }
+
+      // Enter → Open focused folder or preview file
+      if (e.key === 'Enter' && focusedIndex != null && filteredFiles[focusedIndex]) {
+        e.preventDefault();
+        const item = filteredFiles[focusedIndex];
+        if (item.isFolder) {
+          setCurrentPath(item.key);
+        } else {
+          handlePreview(item);
+        }
+        return;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [filteredFiles, selectedKeys, focusedIndex, showDropzone]);
 
   // Selection handlers
   const handleToggleSelect = useCallback((key) => {
@@ -90,34 +231,84 @@ export default function FileExplorer() {
     setCurrentPath(key);
   }, []);
 
-  // Upload
+  // Upload (sequential, per-file progress, with cancel/pause)
   const handleUploadFiles = useCallback(async (fileList) => {
-    const uploadItems = fileList.map((f) => ({ name: f.name, size: f.size, progress: 0 }));
+    cancelRef.current = false;
+    pauseRef.current = false;
+    setIsPaused(false);
+
+    const uploadItems = fileList.map((f) => ({
+      name: f.name, size: f.size, progress: 0, error: null,
+    }));
     setUploads(uploadItems);
     setShowDropzone(false);
 
-    try {
-      await api.uploadFiles(currentPath, fileList, (progressEvent) => {
-        const pct = Math.round((progressEvent.loaded / progressEvent.total) * 100);
-        setUploads((prev) => prev.map((u) => ({ ...u, progress: pct })));
-      });
-      setUploads((prev) => prev.map((u) => ({ ...u, progress: 100 })));
-      addToast(`${fileList.length} file(s) uploaded successfully`, 'success');
-      fetchFiles();
-    } catch (err) {
-      addToast('Upload failed: ' + (err.response?.data?.message || err.message), 'error');
-      setUploads([]);
-    }
-  }, [currentPath, fetchFiles, addToast]);
+    const completed = await uploadFilesSequentially(fileList, currentPath, encryption, {
+      onFileStart: (i) => {
+        setUploads(prev => prev.map((u, idx) => idx === i ? { ...u, progress: 5 } : u));
+      },
+      onFileProgress: (i, pct) => {
+        setUploads(prev => prev.map((u, idx) => idx === i ? { ...u, progress: pct } : u));
+      },
+      onFileComplete: (i) => {
+        setUploads(prev => prev.map((u, idx) => idx === i ? { ...u, progress: 100 } : u));
+      },
+      onFileError: (i, msg) => {
+        setUploads(prev => prev.map((u, idx) => idx === i ? { ...u, error: msg, progress: 100 } : u));
+      },
+      shouldCancel: () => cancelRef.current,
+      shouldPause: () => pauseRef.current,
+    });
 
-  // Download
+    if (completed) {
+      const successCount = uploadItems.length;
+      addToast(
+        `${successCount} file(s) uploaded${encryption?.enabled ? ' (encrypted)' : ''}`,
+        'success'
+      );
+    } else {
+      addToast('Upload cancelled', 'warning');
+    }
+
+    fetchFiles();
+  }, [currentPath, fetchFiles, addToast, encryption]);
+
+  const handleCancelUpload = useCallback(() => {
+    cancelRef.current = true;
+    setUploads([]);
+  }, []);
+
+  const handlePauseUpload = useCallback(() => {
+    pauseRef.current = true;
+    setIsPaused(true);
+  }, []);
+
+  const handleResumeUpload = useCallback(() => {
+    pauseRef.current = false;
+    setIsPaused(false);
+  }, []);
+
+  // Download (with optional decryption)
   const handleDownload = useCallback(async (key) => {
     try {
       const res = await api.downloadFile(key);
-      const url = window.URL.createObjectURL(new Blob([res.data]));
+      let blob = new Blob([res.data]);
+      let fileName = key.split('/').pop();
+
+      if (isEncryptedFile(fileName) && encryption?.passphrase) {
+        try {
+          addToast('Decrypting file...', 'info');
+          blob = await decryptBlob(blob, encryption.passphrase);
+          fileName = getOriginalFilename(fileName);
+        } catch {
+          addToast('Decryption failed — downloading encrypted file', 'warning');
+        }
+      }
+
+      const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = key.split('/').pop();
+      a.download = fileName;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -125,6 +316,25 @@ export default function FileExplorer() {
       addToast('Download started', 'success');
     } catch (err) {
       addToast('Download failed: ' + (err.response?.data?.message || err.message), 'error');
+    }
+  }, [addToast, encryption]);
+
+  // Zip download
+  const handleZipDownload = useCallback(async (keys) => {
+    try {
+      addToast('Preparing ZIP archive...', 'info');
+      const res = await api.downloadZip(keys);
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'ultra-cloud-download.zip';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      addToast('ZIP download started', 'success');
+    } catch (err) {
+      addToast('ZIP download failed: ' + (err.response?.data?.message || err.message), 'error');
     }
   }, [addToast]);
 
@@ -169,17 +379,29 @@ export default function FileExplorer() {
     }
   }, [fetchFiles, addToast]);
 
-  // Preview
+  // Preview (with optional decryption)
   const handlePreview = useCallback(async (file) => {
     try {
       const res = await api.previewFile(file.key);
-      const url = window.URL.createObjectURL(new Blob([res.data], { type: file.contentType }));
+      let blob = new Blob([res.data], { type: file.contentType });
+      let contentType = file.contentType;
+
+      if (isEncryptedFile(file.name) && encryption?.passphrase) {
+        try {
+          blob = await decryptBlob(blob, encryption.passphrase, contentType);
+        } catch {
+          addToast('Cannot preview — decryption failed', 'warning');
+          return;
+        }
+      }
+
+      const url = window.URL.createObjectURL(blob);
       setPreviewUrl(url);
       setPreviewFile(file);
     } catch (err) {
       addToast('Preview failed: ' + (err.response?.data?.message || err.message), 'error');
     }
-  }, [addToast]);
+  }, [addToast, encryption]);
 
   const closePreview = useCallback(() => {
     if (previewUrl) window.URL.revokeObjectURL(previewUrl);
@@ -207,6 +429,18 @@ export default function FileExplorer() {
       if (item && !item.isFolder) handleDownload(key);
     });
   }, [selectedKeys, files, handleDownload]);
+
+  const handleBulkZip = useCallback(() => {
+    const fileKeys = [...selectedKeys].filter((key) => {
+      const item = files.find((f) => f.key === key);
+      return item && !item.isFolder;
+    });
+    if (fileKeys.length > 0) {
+      handleZipDownload(fileKeys);
+    } else {
+      addToast('Select files to download as ZIP', 'warning');
+    }
+  }, [selectedKeys, files, handleZipDownload, addToast]);
 
   const handleBulkDelete = useCallback(() => {
     handleDelete([...selectedKeys]);
@@ -241,6 +475,17 @@ export default function FileExplorer() {
         onTypeChange={setTypeFilter}
       />
 
+      {encryption?.enabled && (
+        <div className="encryption-banner">
+          <span>🔒 Encryption active — files will be encrypted before upload</span>
+        </div>
+      )}
+
+      {/* Keyboard shortcuts hint */}
+      <div className="shortcuts-hint">
+        <kbd>↑↓</kbd> Navigate &nbsp; <kbd>Space</kbd> Select &nbsp; <kbd>⌘U</kbd> Upload &nbsp; <kbd>⌘N</kbd> New Folder &nbsp; <kbd>Del</kbd> Delete
+      </div>
+
       {showDropzone && <DropZone onFilesSelected={handleUploadFiles} />}
 
       {selectedKeys.size > 0 && (
@@ -249,6 +494,7 @@ export default function FileExplorer() {
           onBulkDownload={handleBulkDownload}
           onBulkDelete={handleBulkDelete}
           onBulkShare={handleBulkShare}
+          onBulkZip={handleBulkZip}
           onClear={() => setSelectedKeys(new Set())}
         />
       )}
@@ -264,12 +510,18 @@ export default function FileExplorer() {
         onShare={(file) => setShareFile(file)}
         onPreview={handlePreview}
         onRename={handleRename}
+        onVersionHistory={(file) => setVersionFile(file)}
         loading={loading}
+        focusedIndex={focusedIndex}
       />
 
       <UploadProgress
         uploads={uploads}
         onClose={() => setUploads([])}
+        onCancel={handleCancelUpload}
+        onPause={handlePauseUpload}
+        onResume={handleResumeUpload}
+        isPaused={isPaused}
       />
 
       {showCreateFolder && (
@@ -302,6 +554,14 @@ export default function FileExplorer() {
           count={keysToDelete.length}
           onClose={() => setKeysToDelete(null)}
           onConfirm={confirmDelete}
+        />
+      )}
+
+      {versionFile && (
+        <VersionHistoryModal
+          file={versionFile}
+          onClose={() => setVersionFile(null)}
+          onRestored={fetchFiles}
         />
       )}
     </div>

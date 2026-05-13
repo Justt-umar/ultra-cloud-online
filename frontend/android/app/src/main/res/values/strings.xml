@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Ultra Cloud</string>
+    <string name="title_activity_main">Ultra Cloud</string>
+    <string name="package_name">com.ultracloud.app</string>
+    <string name="custom_url_scheme">com.ultracloud.app</string>
+</resources>

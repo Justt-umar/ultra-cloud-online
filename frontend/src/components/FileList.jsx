@@ -1,19 +1,63 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
-  Folder,
-  FileText,
-  Image,
-  Film,
-  Music,
-  FileCode,
-  File,
-  Download,
-  Trash2,
-  Share2,
-  Eye,
-  Pencil,
-  FolderOpen,
+  Folder, FileText, Image, Film, Music, FileCode, File,
+  Download, Trash2, Share2, Eye, Pencil, FolderOpen, History,
 } from 'lucide-react';
+import * as api from '../services/api';
+
+// ─── Thumbnail Cache ───────────────────
+const thumbnailCache = new Map();
+
+function useThumbnail(item) {
+  const [thumbUrl, setThumbUrl] = useState(null);
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => { isMounted.current = false; };
+  }, []);
+
+  useEffect(() => {
+    if (item.isFolder || !item.contentType?.startsWith('image/')) return;
+    // Skip large images (>5MB) for thumbnail
+    if (item.size > 5 * 1024 * 1024) return;
+
+    const cacheKey = item.key;
+    if (thumbnailCache.has(cacheKey)) {
+      setThumbUrl(thumbnailCache.get(cacheKey));
+      return;
+    }
+
+    let url = null;
+    api.getThumbnail(item.key)
+      .then((res) => {
+        url = URL.createObjectURL(new Blob([res.data]));
+        thumbnailCache.set(cacheKey, url);
+        if (isMounted.current) setThumbUrl(url);
+      })
+      .catch(() => {
+        // Silently fail — show icon fallback
+      });
+
+    // Don't revoke cached URLs — they persist for the session
+  }, [item.key, item.isFolder, item.contentType, item.size]);
+
+  return thumbUrl;
+}
+
+function FileIcon({ item }) {
+  const thumbUrl = useThumbnail(item);
+
+  if (thumbUrl) {
+    return (
+      <div className="file-thumbnail">
+        <img src={thumbUrl} alt="" loading="lazy" />
+      </div>
+    );
+  }
+
+  return getFileIcon(item);
+}
 
 function getFileIcon(item) {
   if (item.isFolder) return <Folder className="file-icon folder" size={20} />;
@@ -57,12 +101,26 @@ export default function FileList({
   onShare,
   onPreview,
   onRename,
+  onVersionHistory,
+  onDragStart,
   loading,
+  focusedIndex,
 }) {
   const [renamingKey, setRenamingKey] = useState(null);
   const [renameValue, setRenameValue] = useState('');
+  const listRef = useRef(null);
 
   const allSelected = files.length > 0 && selectedKeys.size === files.length;
+
+  // Scroll focused item into view
+  useEffect(() => {
+    if (focusedIndex != null && listRef.current) {
+      const items = listRef.current.querySelectorAll('.file-item');
+      if (items[focusedIndex]) {
+        items[focusedIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }, [focusedIndex]);
 
   const handleStartRename = (item) => {
     setRenamingKey(item.key);
@@ -122,12 +180,20 @@ export default function FileList({
         <div className="file-date-header">Modified</div>
         <div style={{ textAlign: 'right' }}>Actions</div>
       </div>
-      <div className="file-list">
-        {files.map((item) => (
+      <div className="file-list" ref={listRef}>
+        {files.map((item, index) => (
           <div
             key={item.key}
-            className={`file-item ${selectedKeys.has(item.key) ? 'selected' : ''}`}
+            className={`file-item ${selectedKeys.has(item.key) ? 'selected' : ''} ${focusedIndex === index ? 'focused' : ''}`}
             onDoubleClick={() => item.isFolder && onNavigateFolder(item.key)}
+            draggable={!item.isFolder}
+            onDragStart={(e) => {
+              if (onDragStart && !item.isFolder) {
+                e.dataTransfer.setData('application/json', JSON.stringify({ key: item.key, name: item.name }));
+                e.dataTransfer.effectAllowed = 'copy';
+                onDragStart(item);
+              }
+            }}
           >
             <div className="file-item-checkbox">
               <input
@@ -138,7 +204,7 @@ export default function FileList({
             </div>
             <div className="file-item-info" onClick={() => item.isFolder && onNavigateFolder(item.key)}>
               <div className="file-item-name">
-                {getFileIcon(item)}
+                <FileIcon item={item} />
                 {renamingKey === item.key ? (
                   <input
                     className="rename-input"
@@ -175,6 +241,15 @@ export default function FileList({
                   title="Download"
                 >
                   <Download size={15} />
+                </button>
+              )}
+              {!item.isFolder && onVersionHistory && (
+                <button
+                  className="file-action-btn"
+                  onClick={(e) => { e.stopPropagation(); onVersionHistory(item); }}
+                  title="Version History"
+                >
+                  <History size={15} />
                 </button>
               )}
               <button

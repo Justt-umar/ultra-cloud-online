@@ -1,6 +1,6 @@
-import { Download, Trash2, Share2 } from 'lucide-react';
+import { Download, Trash2, Share2, Archive } from 'lucide-react';
 
-export default function BulkOperationsBar({ count, onBulkDownload, onBulkDelete, onBulkShare, onClear }) {
+export default function BulkOperationsBar({ count, onBulkDownload, onBulkDelete, onBulkShare, onBulkZip, onClear }) {
   return (
     <div className="bulk-bar">
       <span className="bulk-bar-info">
@@ -18,6 +18,12 @@ export default function BulkOperationsBar({ count, onBulkDownload, onBulkDelete,
           <Download size={14} />
           Download
         </button>
+        {count > 1 && (
+          <button className="btn btn-secondary btn-sm" onClick={onBulkZip}>
+            <Archive size={14} />
+            Download ZIP
+          </button>
+        )}
         <button className="btn btn-secondary btn-sm" onClick={onBulkShare}>
           <Share2 size={14} />
           Share
