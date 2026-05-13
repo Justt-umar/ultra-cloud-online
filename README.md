@@ -4,7 +4,7 @@
 
 # ☁️ Ultra Cloud Online
 
-**A full-stack, multi-cloud storage manager — bring your own bucket from AWS S3, Azure Blob, GCP Cloud Storage, or Backblaze B2 and manage your files from a beautiful, modern web interface.**
+**Enterprise-grade, multi-cloud storage manager — connect AWS S3, Azure Blob, GCP Cloud Storage, and Backblaze B2 simultaneously and manage all your files from one beautiful interface.**
 
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react)](https://reactjs.org/)
 [![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=flat-square&logo=vite)](https://vitejs.dev/)
@@ -14,10 +14,11 @@
 [![Azure Blob](https://img.shields.io/badge/Azure%20Blob-Supported-0078D4?style=flat-square&logo=microsoftazure)](https://azure.microsoft.com/en-us/products/storage/blobs)
 [![GCP Storage](https://img.shields.io/badge/GCP%20Storage-Supported-4285F4?style=flat-square&logo=googlecloud)](https://cloud.google.com/storage)
 [![Backblaze B2](https://img.shields.io/badge/Backblaze%20B2-Supported-E21E29?style=flat-square&logo=backblaze)](https://www.backblaze.com/b2/cloud-storage.html)
+[![PWA](https://img.shields.io/badge/PWA-Ready-5A0FC8?style=flat-square&logo=pwa)](https://web.dev/progressive-web-apps/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
-[Live Demo](https://ultra-cloud-online.vercel.app) · [Report Bug](https://github.com/Justt-umar/ultra-cloud-online/issues) · [Request Feature](https://github.com/Justt-umar/ultra-cloud-online/issues)
+[🌐 Live Demo](https://ultra-cloud-online.onrender.com) · [🐛 Report Bug](https://github.com/Justt-umar/ultra-cloud-online/issues) · [💡 Request Feature](https://github.com/Justt-umar/ultra-cloud-online/issues)
 
 </div>
 
@@ -31,20 +32,11 @@
 - [Architecture](#-architecture)
 - [Project Structure](#-project-structure)
 - [Getting Started](#-getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Local Development](#local-development)
-  - [Environment Variables](#environment-variables)
 - [Supported Cloud Providers](#-supported-cloud-providers)
-- [AWS S3 Setup](#-aws-s3-setup)
-- [Azure Blob Setup](#-azure-blob-storage-setup)
-- [GCP Cloud Storage Setup](#-gcp-cloud-storage-setup)
-- [Backblaze B2 Setup](#-backblaze-b2-setup)
 - [API Reference](#-api-reference)
 - [Docker Deployment](#-docker-deployment)
 - [Cloud Deployment](#-cloud-deployment)
-- [How It Works](#-how-it-works)
 - [Security Model](#-security-model)
-- [Responsive Design](#-responsive-design)
 - [Contributing](#-contributing)
 - [Author](#-author)
 
@@ -52,18 +44,7 @@
 
 ## 🌟 Overview
 
-**Ultra Cloud Online** is a production-ready, full-stack web application that lets you manage files in **any major cloud storage provider** through a polished, browser-based interface. There is no database, no user accounts, and no vendor lock-in — simply select your cloud provider, enter your credentials at runtime, and you get a full-featured file manager directly connected to your bucket.
-
-The application is architected as a **secure server-side proxy**: your cloud credentials are never exposed to the browser. All storage operations flow through the Spring Boot backend, which holds the authenticated session in memory for the lifetime of the connection.
-
-### Supported Providers
-
-| Provider | Free Tier | Storage |
-|---|---|---|
-| ☁️ **AWS S3** | 5 GB, 12 months | Standard S3 buckets |
-| 🔷 **Azure Blob Storage** | 5 GB LRS, 12 months | Blob containers |
-| 🔵 **Google Cloud Storage** | 5 GB in US regions, always free | GCS buckets |
-| 🔴 **Backblaze B2** | **10 GB + 1 GB/day downloads, always free** | B2 buckets |
+**Ultra Cloud Online** is a production-ready, full-stack web application that lets you manage files across **four major cloud storage providers** through a polished, browser-based interface. There is no database, no user accounts, and no vendor lock-in — simply select your cloud provider, enter your credentials at runtime, and get a full-featured file manager connected directly to your bucket.
 
 ### Why Ultra Cloud Online?
 
@@ -71,56 +52,106 @@ The application is architected as a **secure server-side proxy**: your cloud cre
 |---|---|
 | Cloud consoles are complex and overwhelming | Clean, minimal UI focused purely on file management |
 | Locked into one cloud provider | Switch between AWS, Azure, GCP, and Backblaze freely |
-| Credentials exposed if talking directly from the browser | Backend proxy keeps credentials server-side only |
-| No good mobile-friendly cloud storage managers | Fully responsive design for desktop, tablet, and mobile |
+| Can't manage multiple clouds at once | Multi-session tabbed interface for simultaneous connections |
+| Credentials exposed in browser-to-cloud calls | Backend proxy keeps credentials server-side only |
+| No good mobile-friendly cloud storage managers | Fully responsive PWA — installable on any device |
 | Third-party tools require account creation | Zero accounts needed — just your own cloud credentials |
+
+### Supported Providers
+
+| Provider | Free Tier | Storage |
+|---|---|---|
+| ☁️ **AWS S3** | 5 GB, 12 months | Standard S3 buckets |
+| 🔷 **Azure Blob Storage** | 5 GB LRS, 12 months | Blob containers |
+| 🔵 **Google Cloud Storage** | 5 GB in US regions, always free | GCS buckets (JSON + HMAC) |
+| 🔴 **Backblaze B2** | **10 GB + 1 GB/day downloads, always free** | B2 buckets |
 
 ---
 
 ## ✨ Features
 
-### 🗂 File Management
+### 🗂 Core File Management
 - **Browse** files and folders with hierarchical directory navigation
-- **Upload** files up to **500 MB** per file (configurable), with multiple file selection support
-- **Download** files directly through the browser with correct `Content-Disposition` headers
-- **Delete** individual files or folders (folders are recursively deleted including all nested content)
-- **Rename** files and folders (implemented as copy-to-new-key + delete-old-key under the hood)
-- **Create folders** (represented as zero-byte S3 objects with a trailing `/`)
-- **Drag-and-drop** file upload with a dedicated drop zone
+- **Upload** files up to **500 MB** with drag-and-drop support and real-time progress tracking
+- **Download** files with correct `Content-Disposition` headers
+- **Delete** files or entire folders (recursive deletion of nested content)
+- **Rename** files and folders (copy-to-new-key + delete-old under the hood)
+- **Create folders** as virtual directory markers
+- **Bulk operations** — multi-select with checkboxes, select all, bulk delete
 
 ### 🔍 Search & Filter
 - **Real-time search** — filter files by name as you type
-- **Type filter** — filter by: All, Images, Videos, Audio, Documents, Folders
-- Results are filtered server-side using the S3 prefix query, then refined client-side
+- **Type filters** — filter by: All, Images, Videos, Audio, Documents, Folders
+- Server-side prefix queries with client-side refinement
 
-### 👁 Preview
-- **In-browser file preview** for images, PDFs, videos, audio, and plain text/code files
-- Preview served through the backend proxy, preserving correct MIME types
+### 👁 File Preview
+- **In-browser preview** for images, PDFs, videos, audio, and text/code files
+- Served through backend proxy with correct MIME types
 
-### 🔗 Sharing
-- **Generate pre-signed URLs** that grant temporary public access to any file
-- Choose expiry duration: **15 minutes, 1 hour, 24 hours, or 7 days**
-- One-click copy-to-clipboard for the generated URL
+### 🔗 Sharing & Pre-signed URLs
+- **Generate temporary public URLs** for any file
+- Configurable expiry: **15 minutes, 1 hour, 24 hours, or 7 days**
+- One-click copy-to-clipboard
 
-### ✅ Bulk Operations
-- **Select multiple** files and folders using checkboxes
-- **Select all** with a single header checkbox
-- **Bulk delete** selected items in one action
+### 🔄 Multi-Session / Multi-Cloud Tabs
+- **Connect to multiple buckets simultaneously** — even across different providers
+- Tabbed session interface with per-tab connection state
+- Switch between AWS, Azure, GCP, and Backblaze sessions instantly
+
+### 📊 Storage Analytics Dashboard
+- **Visual charts** showing storage usage breakdown by file type
+- Top 10 largest files analysis
+- Total file count and storage metrics
+- Powered by Recharts with animated, interactive charts
+
+### 📜 File Versioning & History
+- View **version history** for files in versioning-enabled buckets
+- Restore previous file versions
+- Native S3/GCS versioning support
+
+### 🔐 Client-Side Encryption (AES-256)
+- **Encrypt files before upload** using AES-256 in the browser
+- Decrypt on download — your cloud provider never sees plaintext
+- Zero-knowledge architecture for sensitive files
+
+### 🔔 Webhook Notifications
+- Configure webhook URLs for file operation events
+- Real-time notifications on upload, delete, rename, and folder creation
+- Event filtering by operation type
+
+### 📝 Audit Logging
+- Complete **audit trail** of all storage operations
+- Timestamped logs with operation type, file key, and status
+- Exportable audit history
 
 ### 🎨 UI & UX
-- **Dark theme** with a premium glassmorphism aesthetic
+- **Dark/Light theme toggle** with smooth transitions
+- **Premium glassmorphism** dark theme aesthetic
 - **Toast notifications** for every operation (success, error, info)
-- **Upload progress panel** — real-time per-file progress tracking
-- **Breadcrumb navigation** — always shows your current path with clickable segments
-- **Fully responsive** — adapts gracefully from 4K desktops down to mobile phones
-- **Keyboard shortcuts** — Escape to cancel rename, Enter to confirm
-- **Inline renaming** — click the rename button and edit directly in the file row
+- **Upload progress panel** — real-time per-file tracking
+- **Breadcrumb navigation** — clickable path segments
+- **Fully responsive** — 4K desktops to mobile phones
+- **Keyboard shortcuts** — Escape to cancel, Enter to confirm
+- **Inline renaming** — edit directly in the file row
+- **Image thumbnails** — visual previews for image files
 
-### 🔐 Connection Management
-- Connect to any S3-compatible bucket at runtime (no server restart required)
-- Disconnect button cleanly closes the SDK client and wipes credentials from memory
-- **Remember Me** — optionally save credentials to `localStorage` for convenience
-- Connection status indicator in the header
+### 📱 Progressive Web App (PWA)
+- **Installable** on desktop and mobile devices
+- Service worker for offline caching
+- App manifest with custom icons
+- Native-like experience when installed
+
+### 🔑 Credential Management
+- **Test credentials** — one-click injection from `.env` for development
+- **Protected fields** — masked display with 🔒 badge when using test mode
+- **Remember Me** — optionally save credentials to `localStorage`
+- **Per-provider setup guides** with step-by-step instructions and free-tier info
+- **GCP dual-auth** — supports both Service Account JSON and HMAC keys (S3-compatible)
+
+### 📱 Mobile & Android
+- **Capacitor integration** for native Android builds
+- Responsive design optimized for touch interactions
+- Tap-friendly action buttons (28px minimum)
 
 ---
 
@@ -132,8 +163,10 @@ The application is architected as a **secure server-side proxy**: your cloud cre
 | **React** | 19 | UI component framework |
 | **Vite** | 8 | Build tool and dev server |
 | **Axios** | 1.x | HTTP client for API calls |
+| **Recharts** | 2.x | Analytics dashboard charts |
 | **Lucide React** | 1.x | Icon library |
-| **Vanilla CSS** | — | Styling (no CSS framework) |
+| **Capacitor** | 7.x | Native mobile builds |
+| **Vanilla CSS** | — | Custom design system (no framework) |
 
 ### Backend
 | Technology | Version | Role |
@@ -142,8 +175,9 @@ The application is architected as a **secure server-side proxy**: your cloud cre
 | **Spring Boot** | 3.4.4 | Application framework |
 | **Spring Web MVC** | — | REST API layer |
 | **Spring Validation** | — | Request validation (`@Valid`) |
-| **AWS SDK for Java v2** | 2.31.9 | S3 client and pre-signer |
-| **AWS S3 Transfer Manager** | — | High-throughput multipart transfers |
+| **AWS SDK for Java v2** | 2.31.9 | S3 + Backblaze B2 client |
+| **Azure Storage Blob SDK** | 12.29.1 | Azure Blob client |
+| **Google Cloud Storage SDK** | 2.45.0 | GCS client (native + HMAC) |
 | **Lombok** | — | Boilerplate reduction |
 | **Maven** | 3.9 | Build and dependency management |
 
@@ -151,52 +185,46 @@ The application is architected as a **secure server-side proxy**: your cloud cre
 | Technology | Role |
 |---|---|
 | **Docker** | Multi-stage containerized backend build |
-| **eclipse-temurin:23-jre** | Minimal production JRE image |
-| **Render / Railway** | Backend hosting (PaaS) |
-| **Vercel / Netlify** | Frontend static hosting |
-
-### Cloud Storage SDKs
-| SDK | Provider | Version |
-|---|---|---|
-| **AWS SDK for Java v2** | AWS S3 + Backblaze B2 | 2.31.9 |
-| **Azure Storage Blob** | Azure Blob Storage | 12.29.1 |
-| **Google Cloud Storage** | GCP Cloud Storage | 2.45.0 |
+| **Render** | Backend + Frontend hosting (PaaS) |
+| **PWA / Service Worker** | Offline caching and installability |
+| **Capacitor** | Android native wrapper |
 
 ---
 
 ## 🏗 Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                         Browser                              │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │              React + Vite Frontend                  │    │
-│  │                                                     │    │
-│  │   Provider Selector ──┐                             │    │
-│  │   CredentialsForm ────┤── axios ──► REST API calls  │    │
-│  │   FileExplorer ───────┤                             │    │
-│  │   FileList ───────────┤                             │    │
-│  │   Modals ─────────────┘                             │    │
-│  └─────────────────────────┬───────────────────────────┘    │
-└────────────────────────────│────────────────────────────────┘
-                             │ HTTPS
-                             ▼
-┌─────────────────────────────────────────────────────────────┐
-│            Spring Boot Backend (Java 23)                      │
-│                                                              │
-│  StorageController (/api/**)                                 │
-│       │                                                      │
-│       ├── StorageSessionManager  (active provider)           │
-│       │        └── StorageProviderFactory                    │
-│       │              ├── AwsStorageProvider                  │
-│       │              ├── AzureStorageProvider                │
-│       │              ├── GcpStorageProvider                  │
-│       │              └── BackblazeStorageProvider            │
-│       │                                                      │
-│       └── StorageService  (all operations)                  │
-│                └── listObjects, upload, download, delete,    │
-│                    rename, createFolder, presignUrl, search  │
-└──────────────┬──────────┬──────────┬──────────┬─────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                            Browser                                │
+│  ┌──────────────────────────────────────────────────────────┐    │
+│  │                React + Vite Frontend (PWA)               │    │
+│  │                                                          │    │
+│  │   SessionTabBar ────► Multi-session management           │    │
+│  │   CredentialsForm ──► Provider auth (4 providers)        │    │
+│  │   FileExplorer ─────► File operations & navigation       │    │
+│  │   AnalyticsDashboard► Storage charts & metrics           │    │
+│  │   SettingsPanel ────► Themes, encryption, webhooks       │    │
+│  │   crypto.js ────────► AES-256 client-side encryption     │    │
+│  └──────────────────────────┬───────────────────────────────┘    │
+└─────────────────────────────│───────────────────────────────────┘
+                              │ HTTPS (REST API)
+                              ▼
+┌──────────────────────────────────────────────────────────────────┐
+│              Spring Boot Backend (Java 23)                         │
+│                                                                    │
+│  StorageController (/api/**)                                      │
+│       │                                                            │
+│       ├── StorageSessionManager (multi-session state)             │
+│       │        └── StorageProviderFactory                         │
+│       │              ├── AwsStorageProvider (AWS SDK v2)          │
+│       │              ├── AzureStorageProvider (Azure SDK)         │
+│       │              ├── GcpStorageProvider (GCS + HMAC fallback) │
+│       │              └── BackblazeStorageProvider (S3-compat)     │
+│       │                                                            │
+│       ├── StorageService (unified CRUD operations)                │
+│       ├── AuditService (operation logging)                        │
+│       └── WebhookService (event notifications)                    │
+└──────────────┬──────────┬──────────┬──────────┬───────────────────┘
                │          │          │          │
         AWS SDK v2    Azure SDK   GCP SDK   AWS SDK v2
                │          │          │      (B2 endpoint)
@@ -207,13 +235,14 @@ The application is architected as a **secure server-side proxy**: your cloud cre
          └─────────┘└──────────┘└─────────┘└──────────┘
 ```
 
-**Key design decisions:**
-- **Strategy Pattern** — each cloud provider implements a `StorageProvider` interface, selected at connect time.
-- **No database** — cloud storage is the only data store. The backend is entirely stateless except for the in-memory session.
-- **No frontend-to-cloud direct calls** — eliminates CORS complexity and credential exposure.
-- **Session-per-server** — one active storage session at a time (suitable for personal/team use).
-- **Pre-signed URLs / SAS tokens** — share files without exposing your credentials.
-- **Backblaze B2** reuses the AWS SDK (S3-compatible API) — zero extra code needed.
+### Key Design Decisions
+
+- **Strategy Pattern** — each cloud provider implements a `StorageProvider` interface, selected at connect time
+- **HMAC Delegation** — GCP provider supports dual-mode auth: native JSON keys or S3-compatible HMAC keys
+- **No database** — cloud storage is the only data store; backend is stateless except for in-memory sessions
+- **No frontend-to-cloud direct calls** — eliminates CORS complexity and credential exposure
+- **Multi-session architecture** — connect to multiple buckets/providers simultaneously via tabbed UI
+- **Backblaze B2** reuses the AWS SDK (S3-compatible API) — zero extra code needed
 
 ---
 
@@ -222,59 +251,75 @@ The application is architected as a **secure server-side proxy**: your cloud cre
 ```
 ultra-cloud-online/
 │
-├── frontend/                          # React + Vite SPA
-│   ├── public/                        # Static assets
+├── frontend/                              # React + Vite SPA (PWA)
+│   ├── public/
+│   │   ├── icons/                        # PWA icons (192px, 512px, SVG)
+│   │   ├── manifest.json                 # PWA manifest
+│   │   └── sw.js                         # Service worker
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── Breadcrumb.jsx         # Clickable path navigation
-│   │   │   ├── BulkOperationsBar.jsx  # Bulk select/delete toolbar
-│   │   │   ├── CorsInstructions.jsx   # In-app CORS setup guide
-│   │   │   ├── CreateFolderModal.jsx  # New folder dialog
-│   │   │   ├── CredentialsForm.jsx    # AWS credentials login form
-│   │   │   ├── DeleteConfirmModal.jsx # Delete confirmation dialog
-│   │   │   ├── DropZone.jsx           # Drag-and-drop upload area
-│   │   │   ├── FileExplorer.jsx       # Main file browser (root component)
-│   │   │   ├── FileList.jsx           # Table of files and folders
-│   │   │   ├── Footer.jsx             # Page footer
-│   │   │   ├── Header.jsx             # Top nav with connection status
-│   │   │   ├── PreviewModal.jsx       # In-browser file preview
-│   │   │   ├── SearchFilterBar.jsx    # Search input + type filter dropdown
-│   │   │   ├── ShareModal.jsx         # Pre-signed URL generator
-│   │   │   ├── Toast.jsx              # Toast notification renderer
-│   │   │   └── UploadProgress.jsx     # Per-file upload progress panel
-│   │   ├── context/
-│   │   │   └── ToastContext.jsx       # Global toast state management
+│   │   │   ├── AnalyticsDashboard.jsx    # Storage usage charts (Recharts)
+│   │   │   ├── Breadcrumb.jsx            # Clickable path navigation
+│   │   │   ├── BulkOperationsBar.jsx     # Multi-select toolbar
+│   │   │   ├── CorsInstructions.jsx      # Per-provider setup guides
+│   │   │   ├── CreateFolderModal.jsx     # New folder dialog
+│   │   │   ├── CredentialsForm.jsx       # Multi-provider auth form + test mode
+│   │   │   ├── DeleteConfirmModal.jsx    # Delete confirmation
+│   │   │   ├── DropZone.jsx              # Drag-and-drop upload area
+│   │   │   ├── FileExplorer.jsx          # Main file browser (root)
+│   │   │   ├── FileList.jsx              # File/folder table with thumbnails
+│   │   │   ├── Header.jsx                # Top nav + connection status
+│   │   │   ├── PreviewModal.jsx          # In-browser file preview
+│   │   │   ├── SearchFilterBar.jsx       # Search + type filter
+│   │   │   ├── SessionTabBar.jsx         # Multi-session tab management
+│   │   │   ├── SettingsPanel.jsx         # Theme, encryption, webhooks, audit
+│   │   │   ├── ShareModal.jsx            # Pre-signed URL generator
+│   │   │   ├── Toast.jsx                 # Toast notification renderer
+│   │   │   ├── UploadProgress.jsx        # Per-file upload progress
+│   │   │   └── VersionHistoryModal.jsx   # File version history viewer
 │   │   ├── services/
-│   │   │   └── api.js                 # Axios API client (all backend calls)
-│   │   ├── App.jsx                    # Root app component + routing logic
-│   │   ├── index.css                  # Global styles + design system tokens
-│   │   └── main.jsx                  # React DOM entry point
-│   ├── index.html                     # HTML shell
-│   ├── vite.config.js                 # Vite configuration
-│   └── package.json                   # Frontend dependencies
+│   │   │   ├── api.js                    # Axios API client
+│   │   │   └── crypto.js                 # AES-256 encryption/decryption
+│   │   ├── context/
+│   │   │   └── ToastContext.jsx          # Global toast state
+│   │   ├── App.jsx                       # Root component
+│   │   ├── index.css                     # Design system (2900+ lines)
+│   │   └── main.jsx                      # Entry point
+│   ├── android/                          # Capacitor Android project
+│   ├── capacitor.config.json             # Mobile build config
+│   └── package.json
 │
-├── backend/                           # Spring Boot REST API
+├── backend/                               # Spring Boot REST API
 │   ├── src/main/java/com/storage/
-│   │   ├── StorageApplication.java    # Spring Boot entry point
+│   │   ├── StorageApplication.java       # Spring Boot entry point
 │   │   ├── config/
-│   │   │   └── WebConfig.java         # CORS configuration
+│   │   │   └── WebConfig.java            # CORS configuration
 │   │   ├── controller/
-│   │   │   └── S3Controller.java      # All REST endpoints (/api/**)
+│   │   │   └── StorageController.java    # All REST endpoints (/api/**)
 │   │   ├── dto/
-│   │   │   ├── ApiResponse.java       # Standard response wrapper
-│   │   │   ├── ConnectRequest.java    # POST /api/connect body
-│   │   │   ├── FileItem.java          # File/folder representation
-│   │   │   ├── RenameRequest.java     # PUT /api/files/rename body
-│   │   │   ├── ShareRequest.java      # POST /api/files/share body
-│   │   │   └── ShareResponse.java     # Share URL + expiry response
+│   │   │   ├── ApiResponse.java          # Standard response wrapper
+│   │   │   ├── AuditLog.java             # Audit log entry DTO
+│   │   │   ├── ConnectRequest.java       # POST /api/connect body
+│   │   │   ├── FileItem.java             # File/folder representation
+│   │   │   ├── RenameRequest.java        # PUT /api/files/rename body
+│   │   │   ├── ShareRequest.java         # POST /api/files/share body
+│   │   │   └── ShareResponse.java        # Share URL response
 │   │   └── service/
-│   │       ├── S3Service.java         # Core S3 business logic
-│   │       └── S3SessionManager.java  # S3Client lifecycle management
-│   ├── src/main/resources/
-│   │   └── application.properties     # Server config (port, file limits)
-│   ├── Dockerfile                     # Multi-stage Docker build
-│   └── pom.xml                        # Maven dependencies
+│   │       ├── AuditService.java         # Operation audit logging
+│   │       ├── StorageService.java       # Unified CRUD operations
+│   │       ├── StorageSessionManager.java # Multi-session lifecycle
+│   │       ├── WebhookService.java       # Event webhook dispatcher
+│   │       └── provider/
+│   │           ├── StorageProvider.java       # Provider interface
+│   │           ├── StorageProviderFactory.java # Factory pattern
+│   │           ├── AwsStorageProvider.java     # AWS S3
+│   │           ├── AzureStorageProvider.java   # Azure Blob
+│   │           ├── GcpStorageProvider.java     # GCP (JSON + HMAC)
+│   │           └── BackblazeStorageProvider.java # Backblaze B2
+│   ├── Dockerfile                        # Multi-stage Docker build
+│   └── pom.xml                           # Maven dependencies
 │
+├── .gitignore                            # Protects .env secrets
 └── README.md
 ```
 
@@ -284,335 +329,158 @@ ultra-cloud-online/
 
 ### Prerequisites
 
-Make sure you have the following installed:
-
 | Tool | Minimum Version | Check |
 |---|---|---|
 | Node.js | 18+ | `node --version` |
 | npm | 9+ | `npm --version` |
 | Java JDK | 23 | `java --version` |
 | Maven | 3.9+ | `mvn --version` |
-| Git | any | `git --version` |
-
-You also need an **AWS account** with an S3 bucket and an IAM user with appropriate permissions (see [AWS S3 Setup](#-aws-s3-setup)).
-
----
 
 ### Local Development
 
-#### 1. Clone the repository
-
 ```bash
+# 1. Clone
 git clone https://github.com/Justt-umar/ultra-cloud-online.git
 cd ultra-cloud-online
-```
 
-#### 2. Start the Backend
-
-```bash
+# 2. Start Backend
 cd backend
 mvn spring-boot:run
-```
+# → http://localhost:8080
 
-The Spring Boot server starts on **`http://localhost:8080`**.
-
-> **First-time users:** Maven will download all dependencies (~200 MB). This only happens once.
-
-#### 3. Start the Frontend
-
-Open a new terminal:
-
-```bash
+# 3. Start Frontend (new terminal)
 cd frontend
 npm install
 npm run dev
+# → http://localhost:5173
 ```
 
-The Vite dev server starts on **`http://localhost:5173`**.
+### Environment Variables (Optional — for Test Mode)
 
-#### 4. Open in Browser
+Create `frontend/.env` for one-click test credential injection:
 
-Navigate to `http://localhost:5173`. Enter your AWS credentials in the login form to connect.
+```env
+# AWS S3
+VITE_TEST_AWS_ACCESS_KEY=your-access-key
+VITE_TEST_AWS_SECRET_KEY=your-secret-key
+VITE_TEST_AWS_REGION=us-east-1
+VITE_TEST_AWS_BUCKET=your-bucket
+
+# Azure Blob Storage
+VITE_TEST_AZURE_CONNECTION_STRING=DefaultEndpointsProtocol=https;AccountName=...
+VITE_TEST_AZURE_CONTAINER=your-container
+
+# GCP Cloud Storage (HMAC mode)
+VITE_TEST_GCP_HMAC_ACCESS_KEY=GOOG3B...
+VITE_TEST_GCP_HMAC_SECRET_KEY=your-hmac-secret
+VITE_TEST_GCP_PROJECT_ID=your-project-id
+VITE_TEST_GCP_BUCKET=your-bucket
+
+# Backblaze B2
+VITE_TEST_B2_ACCESS_KEY=your-key-id
+VITE_TEST_B2_SECRET_KEY=your-app-key
+VITE_TEST_B2_REGION=us-east-005
+VITE_TEST_B2_BUCKET=your-bucket
+```
+
+> ⚠️ Never commit `.env` files — they are gitignored by default.
 
 ---
 
-### Environment Variables
+## ☁️ Provider Setup Guides
 
-The backend requires **no environment variables** for local development — credentials are supplied at runtime through the UI.
+### AWS S3
 
-For production deployments, you may optionally configure the following in `application.properties` or as environment variables:
+1. [AWS Console](https://console.aws.amazon.com/s3/) → **Create bucket**
+2. **IAM** → Users → Create user → Attach `AmazonS3FullAccess`
+3. Security credentials → **Create access key** → Copy both keys
+4. Enter in Ultra Cloud: Access Key ID, Secret Key, Region, Bucket name
 
-| Variable | Default | Description |
-|---|---|---|
-| `SERVER_PORT` | `8080` | Port the Spring Boot server listens on |
-| `SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE` | `500MB` | Maximum single file upload size |
-| `SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE` | `500MB` | Maximum total request size |
+### Azure Blob Storage
 
----
+1. [Azure Portal](https://portal.azure.com) → **Storage accounts** → Create
+2. Choose LRS redundancy (cheapest), Standard performance
+3. Create a **Container** under Data storage
+4. **Access keys** → Copy the Connection String
+5. Enter in Ultra Cloud: Connection String, Container name
 
-## 🪣 AWS S3 Setup
+### Google Cloud Storage
 
-### Step 1: Create an S3 Bucket
+1. [GCP Console](https://console.cloud.google.com) → **Cloud Storage** → Create bucket
+2. **Option A (JSON):** IAM → Service Accounts → Create → Download JSON key
+3. **Option B (HMAC):** Cloud Storage → Settings → Interoperability → Create HMAC key
+4. Enter in Ultra Cloud: Choose auth mode, paste credentials, bucket name
 
-1. Sign in to [AWS Console](https://console.aws.amazon.com/s3/)
-2. Click **Create bucket**
-3. Choose a unique bucket name and region
-4. **Uncheck** "Block all public access" only if you plan to use public URLs (otherwise leave blocked)
-5. Click **Create bucket**
+### Backblaze B2
 
-### Step 2: Create an IAM User
-
-1. Go to **IAM → Users → Create user**
-2. Name it (e.g., `ultra-cloud-user`)
-3. Select **"Attach policies directly"**
-4. Attach the following custom policy (or `AmazonS3FullAccess` for simplicity):
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "s3:ListBucket",
-        "s3:GetObject",
-        "s3:PutObject",
-        "s3:DeleteObject",
-        "s3:CopyObject",
-        "s3:HeadObject",
-        "s3:HeadBucket",
-        "s3:GetObjectAttributes"
-      ],
-      "Resource": [
-        "arn:aws:s3:::YOUR-BUCKET-NAME",
-        "arn:aws:s3:::YOUR-BUCKET-NAME/*"
-      ]
-    }
-  ]
-}
-```
-
-5. Go to **Security credentials → Create access key**
-6. Choose **"Application running outside AWS"**
-7. Save the **Access Key ID** and **Secret Access Key** — you will not see the secret again
-
-### Step 3: Configure CORS on the Bucket (only if accessing the bucket directly)
-
-Since Ultra Cloud Online uses a **backend proxy**, no bucket-level CORS is strictly required. However, if you ever access the bucket directly from the browser, add this CORS policy under **Bucket → Permissions → CORS**:
-
-```json
-[
-  {
-    "AllowedHeaders": ["*"],
-    "AllowedMethods": ["GET", "PUT", "POST", "DELETE", "HEAD"],
-    "AllowedOrigins": ["*"],
-    "ExposeHeaders": ["ETag", "Content-Length", "Content-Type"]
-  }
-]
-```
+1. [Backblaze](https://www.backblaze.com/sign-up/cloud-storage) → Create free account (no credit card)
+2. **B2 Cloud Storage** → Buckets → Create bucket (note the region from endpoint)
+3. **App Keys** → Add New Application Key → Copy keyID and applicationKey
+4. Enter in Ultra Cloud: Key ID, App Key, Region, Bucket name
 
 ---
 
 ## 📡 API Reference
 
-All endpoints are prefixed with `/api`. The backend returns a standard `ApiResponse` wrapper:
+All endpoints are prefixed with `/api`. Standard response format:
 
 ```json
-{
-  "success": true,
-  "message": "Operation description",
-  "data": { ... }
-}
+{ "success": true, "message": "...", "data": { ... } }
 ```
 
 ### Connection
-
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/connect` | Connect to an S3 bucket |
+| `POST` | `/api/connect` | Connect to a storage provider |
 | `POST` | `/api/disconnect` | Disconnect and clear credentials |
-| `GET` | `/api/status` | Check current connection state |
-
-**`POST /api/connect` — Request Body:**
-```json
-{
-  "accessKeyId": "AKIAIOSFODNN7EXAMPLE",
-  "secretAccessKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-  "region": "us-east-1",
-  "bucket": "my-bucket-name"
-}
-```
-
----
+| `GET` | `/api/status` | Check connection state |
 
 ### File Operations
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/files?prefix=` | List files/folders at path |
+| `POST` | `/api/files/upload?prefix=` | Upload files |
+| `GET` | `/api/files/download?key=` | Download a file |
+| `GET` | `/api/files/preview?key=` | Preview a file (inline) |
+| `DELETE` | `/api/files` | Delete files (body: `["key1","key2"]`) |
+| `POST` | `/api/files/folder` | Create a folder |
+| `PUT` | `/api/files/rename` | Rename file/folder |
+| `POST` | `/api/files/share` | Generate pre-signed URL |
+| `GET` | `/api/files/search` | Search by name and type |
 
-| Method | Endpoint | Query Params | Description |
-|---|---|---|---|
-| `GET` | `/api/files` | `prefix` | List files/folders at a path |
-| `POST` | `/api/files/upload` | `prefix` | Upload one or more files |
-| `GET` | `/api/files/download` | `key` | Download a file |
-| `GET` | `/api/files/preview` | `key` | Preview a file (inline, correct MIME) |
-| `DELETE` | `/api/files` | — | Delete one or more files (body: `["key1","key2"]`) |
-| `POST` | `/api/files/folder` | — | Create a new folder |
-| `PUT` | `/api/files/rename` | — | Rename a file or folder |
-| `POST` | `/api/files/share` | — | Generate a pre-signed download URL |
-| `GET` | `/api/files/search` | `prefix`, `query`, `type` | Search files by name and type |
-
-**`PUT /api/files/rename` — Request Body:**
-```json
-{
-  "oldKey": "folder/old-name.jpg",
-  "newKey": "folder/new-name.jpg"
-}
-```
-
-**`POST /api/files/share` — Request Body:**
-```json
-{
-  "key": "folder/document.pdf",
-  "durationMinutes": 60
-}
-```
-
-**`POST /api/files/share` — Response:**
-```json
-{
-  "success": true,
-  "message": "Share URL generated",
-  "data": {
-    "url": "https://bucket.s3.amazonaws.com/document.pdf?X-Amz-Signature=...",
-    "durationMinutes": 60
-  }
-}
-```
+### Sessions
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/sessions` | List all active sessions |
+| `POST` | `/api/sessions/{id}/activate` | Switch active session |
+| `DELETE` | `/api/sessions/{id}` | Close a session |
 
 ---
 
 ## 🐳 Docker Deployment
 
-The backend includes a **multi-stage Dockerfile** that produces a minimal production image:
-
-```dockerfile
-# Stage 1: Build
-FROM maven:3.9-eclipse-temurin-23 AS builder
-WORKDIR /app
-COPY pom.xml .
-COPY src ./src
-RUN mvn clean package -DskipTests
-
-# Stage 2: Run
-FROM eclipse-temurin:23-jre
-WORKDIR /app
-COPY --from=builder /app/target/*.jar app.jar
-EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
-```
-
-### Build and Run
-
 ```bash
-# Build the image
+# Build
 cd backend
 docker build -t ultra-cloud-backend .
 
-# Run the container
+# Run
 docker run -p 8080:8080 ultra-cloud-backend
 ```
 
-The container exposes port `8080`. Map it to any host port you prefer.
-
 ---
 
-## ☁️ Cloud Deployment
+## ☁️ Cloud Deployment (Render)
 
-### Backend — Render (Recommended)
+The app is deployed on **Render** as a single full-stack service:
 
-1. Push your code to GitHub
-2. Go to [render.com](https://render.com) → **New → Web Service**
-3. Connect your GitHub repository
-4. Set the following:
+1. Push code to GitHub
+2. [Render](https://render.com) → **New → Web Service** → Connect repo
+3. Configure:
    - **Root directory:** `backend`
    - **Build command:** `mvn clean package -DskipTests`
    - **Start command:** `java -jar target/*.jar`
-   - **Environment:** `Java`
-5. Deploy
-
-### Backend — Railway
-
-1. Go to [railway.app](https://railway.app) → **New Project → Deploy from GitHub**
-2. Select the repository, set **Root directory** to `backend`
-3. Railway auto-detects the Dockerfile and builds it
-
-### Frontend — Vercel (Recommended)
-
-1. Go to [vercel.com](https://vercel.com) → **New Project**
-2. Import your GitHub repository
-3. Set:
-   - **Root directory:** `frontend`
-   - **Build command:** `npm run build`
-   - **Output directory:** `dist`
-4. Add an environment variable:
-   ```
-   VITE_API_URL=https://your-backend-url.onrender.com
-   ```
-5. Deploy
-
-### Frontend — Netlify
-
-1. Go to [netlify.com](https://netlify.com) → **Add new site → Import from Git**
-2. Set **Base directory** to `frontend`, **Build command** to `npm run build`, **Publish directory** to `dist`
-3. Add the `VITE_API_URL` environment variable
-4. Deploy
-
-> **CORS Note:** When deploying, ensure your backend's `WebConfig.java` includes your frontend's production domain in `allowedOriginPatterns`. The current config already allows `*.vercel.app` and `*.up.railway.app`.
-
----
-
-## 🔬 How It Works
-
-### Credential Flow
-
-```
-User enters credentials in UI
-        │
-        ▼
-POST /api/connect
-        │
-        ▼
-S3SessionManager.connect()
-  ├── Creates AwsBasicCredentials (in-memory only)
-  ├── Builds S3Client (AWS SDK v2)
-  ├── Builds S3Presigner
-  └── Validates by calling headBucket() — fails fast if credentials are wrong
-        │
-        ▼
-Connected ✓ — session held in server memory
-```
-
-### File Listing (Directory Browsing)
-
-The backend calls `ListObjectsV2` with:
-- `prefix` = current folder path (e.g., `photos/vacation/`)
-- `delimiter` = `/`
-
-This causes S3 to return:
-- **CommonPrefixes** → sub-folders (everything up to the next `/`)
-- **Contents** → files at this exact level only
-
-This creates the illusion of a real folder hierarchy even though S3 is a flat key-value store.
-
-### Rename Operation
-
-S3 has no native rename. The service implements it as:
-1. **`CopyObject`** — copies the object to the new key
-2. **`DeleteObject`** — deletes the original key
-
-For folders, all objects under the old prefix are individually copied to the new prefix before the old prefix is deleted.
-
-### Pre-signed URLs
-
-Pre-signed URLs are generated by the **AWS S3 Presigner** (not the main S3Client). The URL contains a cryptographic signature that grants temporary read access to a specific object without requiring AWS credentials. The URL expires after the chosen duration.
+4. Deploy → Your app is live!
 
 ---
 
@@ -620,57 +488,34 @@ Pre-signed URLs are generated by the **AWS S3 Presigner** (not the main S3Client
 
 | Concern | How It's Handled |
 |---|---|
-| AWS credentials in browser | ❌ Never sent to browser — backend proxy only |
-| Credentials at rest | ❌ Never persisted to disk by default; `Remember Me` uses `localStorage` (browser only) |
-| CORS | Configured via Spring `WebMvcConfigurer` to allowlist specific origins only |
-| File upload size | Capped at 500 MB by Spring's multipart config (configurable) |
+| Cloud credentials in browser | ❌ Never — backend proxy only |
+| Credentials at rest | ❌ Never persisted to disk; optional `localStorage` for convenience |
+| Client-side encryption | ✅ AES-256 encryption before upload |
+| CORS | Allowlisted origins via Spring `WebMvcConfigurer` |
+| File upload size | Capped at 500 MB (configurable) |
 | Input validation | `@Valid` + Jakarta Validation on all request bodies |
-| Pre-signed URL expiry | Enforced by AWS — URLs become invalid after the specified duration |
-
-> ⚠️ **Important:** This application maintains a **single global S3 session** on the server. It is designed for **personal or small-team use**. For multi-user deployments, each user should run their own backend instance.
+| Pre-signed URL expiry | Enforced by provider — URLs auto-expire |
+| Test credentials | Protected with masking and read-only fields |
 
 ---
 
 ## 📱 Responsive Design
 
-The UI is fully responsive across all screen sizes:
-
 | Breakpoint | Layout |
 |---|---|
-| **Desktop** (`> 768px`) | 5-column grid table: Checkbox \| Name \| Size \| Modified \| Actions |
-| **Mobile** (`≤ 768px`) | Flex rows: Checkbox + [Name stacked above Size • Modified] + Actions |
-| **Small Mobile** (`≤ 640px`) | Bulk bar stacks vertically; header condensed; tap-friendly 28px action buttons |
+| **Desktop** (`> 768px`) | Full table: Checkbox \| Name \| Size \| Modified \| Actions |
+| **Tablet** (`≤ 768px`) | Condensed flex rows with stacked metadata |
+| **Mobile** (`≤ 640px`) | Touch-optimized with 28px action buttons |
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Here's how to get started:
-
 1. **Fork** the repository
 2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Make your changes and commit: `git commit -m 'feat: add amazing feature'`
-4. Push to your fork: `git push origin feature/amazing-feature`
-5. Open a **Pull Request** against `main`
-
-### Commit Message Convention
-
-This project follows [Conventional Commits](https://www.conventionalcommits.org/):
-
-```
-feat: add multi-bucket support
-fix: resolve mobile action button overflow
-docs: update API reference
-refactor: extract S3 error handler
-```
-
-### Reporting Issues
-
-Please use [GitHub Issues](https://github.com/Justt-umar/ultra-cloud-online/issues) to report bugs. Include:
-- Browser and OS version
-- Steps to reproduce
-- Expected vs actual behavior
-- Console errors (if any)
+3. Commit: `git commit -m 'feat: add amazing feature'`
+4. Push: `git push origin feature/amazing-feature`
+5. Open a **Pull Request**
 
 ---
 
@@ -690,6 +535,8 @@ Please use [GitHub Issues](https://github.com/Justt-umar/ultra-cloud-online/issu
 
 <div align="center">
 
-© 2026 Ultra Cloud Online · Built with React, Spring Boot & AWS SDK v2
+© 2026 Ultra Cloud Online · Built with React 19, Spring Boot 3.4, and Multi-Cloud SDKs
+
+**AWS S3 · Azure Blob · Google Cloud Storage · Backblaze B2**
 
 </div>
